@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ka">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>დღის ანგარიშები — დისტრიბუცია</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">დიესტრიბუცია</p>
+          <h1>დღის ანგარიშები</h1>
+          <div class="hero-actions">
+            <a href="index.html" class="secondary-btn">↩️ შეკვეთების გვერდი</a>
+            <button id="exportHistoryBtn" type="button" class="primary-btn">📥 Excel-ში ჩამოტვირთვა</button>
+            <button id="exportHistoryPdfBtn" type="button" class="secondary-btn">📄 PDF-ში ჩამოტვირთვა</button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="panel history-panel">
+          <div class="orders-header">
+            <div>
+              <h2>დღიური მონაცემები</h2>
+             
+             
+             
+            </div>
+            <label class="report-picker">
+              <span>არჩეული დღე</span>
+              <input id="historyDate" type="date" />
+            </label>
+          </div>
+
+          <div class="period-export-bar">
+            <div class="period-export-title">პერიოდის ანგარიში</div>
+            <div class="period-export-controls">
+              <label class="report-picker period-picker">
+                <span>დან (From)</span>
+                <input id="periodFromDate" type="date" />
+              </label>
+              <label class="report-picker period-picker">
+                <span>მდე (To)</span>
+                <input id="periodToDate" type="date" />
+              </label>
+              <button id="exportPeriodBtn" type="button" class="primary-btn">📥 ექსპორტი პერიოდის მიხედვით (Excel)</button>
+            </div>
+          </div>
+
+          <div class="report-total">
+            <p>დღიური ჯამი</p>
+            <strong id="historyTotal">0.00 ლ</strong>
+          </div>
+
+          <div id="historySummary" class="daily-report"></div>
+          <div id="historyOrders" class="orders-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script type="module" src="./modules/history.js?v=20261117a"></script>
+  </body>
+</html>

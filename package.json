@@ -1,0 +1,8 @@
+{
+  "name": "distribucia-orders",
+  "private": true,
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "@vercel/blob": "^2.9.0"
+  }
+}

@@ -1,0 +1,165 @@
+﻿<!doctype html>
+<html lang="ka">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>შეკვეთები</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">დისტრიბუცია</p>
+          <h1>შეკვეთები</h1>
+        </div>
+        <div class="hero-actions">
+          <button id="openVanStockBtn" type="button" class="secondary-btn">🚚 ბორტის ნაშთები</button>
+        </div>
+      </header>
+
+      <main class="layout-grid">
+        <section class="panel form-panel">
+          <h2 id="orderFormTitle">ახალი შეკვეთა</h2>
+          <p id="editBanner" class="edit-banner" hidden></p>
+
+          <form id="saleForm" class="sale-form">
+            <label class="suggest-field">
+              <span>სახელი გვარი</span>
+              <input id="storeName" type="text" required placeholder="მაგ.: გიორგი ბერიძე" autocomplete="off" />
+              <div id="storeNameSuggestions" class="suggest-list" hidden></div>
+            </label>
+            <label class="suggest-field">
+              <span>ტელეფონი</span>
+              <input
+                id="storePhone"
+                type="tel"
+                inputmode="tel"
+                autocomplete="off"
+                maxlength="20"
+                pattern="[0-9+()\-\s]+"
+                placeholder="5xx-xxx-xxx"
+              />
+            </label>
+            <label class="full-width">
+              <span>მისამართი</span>
+              <input
+                id="storeAddress"
+                type="text"
+                autocomplete="off"
+                placeholder="მაგ.: ვაკე, 10"
+              />
+            </label>
+
+            <label class="full-width suggest-field">
+              <span>პროდუქტი (კოდი ან დასახელება)</span>
+              <div class="product-search-wrap">
+                <input
+                  id="productSearch"
+                  type="text"
+                  autocomplete="off"
+                  placeholder=""
+                />
+                <span id="productSearchHint" class="product-search-hint" aria-hidden="true"></span>
+              </div>
+              <input id="productSelect" type="hidden" value="" />
+              <div id="productSuggestions" class="suggest-list" hidden></div>
+            </label>
+            <label>
+              <span>რაოდენობა</span>
+              <input id="quantity" type="number" min="1" value="1" required />
+            </label>
+            <label>
+              <span>ფასი (ლ)</span>
+              <input id="priceInput" type="number" min="0" step="0.01" required />
+            </label>
+
+            <div class="form-inline-controls full-width">
+              <button type="button" id="addToCartBtn" class="secondary-btn">დაამატე კალათაში</button>
+              <button type="button" id="clearCartBtn" class="danger-btn">კალათის გაწმენდა</button>
+            </div>
+
+            <div class="subtotal-card full-width">
+              <div>
+                <p>პროდუქტის ჯამი</p>
+                <strong id="subtotalDisplay">0.00 ლ</strong>
+              </div>
+            </div>
+
+            <div id="cartContainer" class="cart-container full-width">
+              <div class="cart-header-row">
+                <h3 id="cartTitle">ინ-პროგრეს შეკვეთა</h3>
+                <div class="cart-total-pill">
+                  <span>კალათის ჯამი</span>
+                  <strong id="cartTotal">0.00 ლ</strong>
+                </div>
+              </div>
+              <div id="cartTable" class="cart-table"></div>
+              <div id="cartSummary" class="cart-summary-card"></div>
+            </div>
+
+            <div class="form-actions full-width">
+              <button type="button" id="completeOrderBtn" class="primary-btn">დასრულება და შენახვა</button>
+              <button type="button" id="cancelEditBtn" class="secondary-btn" hidden>რედაქტირების გაუქმება</button>
+              <button type="button" id="historyBtn" class="primary-btn">ანგარიში</button>
+              <p id="formMessage" aria-live="polite"></p>
+            </div>
+          </form>
+        </section>
+
+        <aside class="panel report-panel is-hidden">
+          <h2>დღის შეკვეთები</h2>
+          <p id="reportLabel" class="report-label">დღიური ანგარიში</p>
+
+          <div class="report-controls">
+            <label class="report-picker">
+              <span>ანგარიშის დღე</span>
+              <input id="reportDate" type="date" />
+            </label>
+            <button id="openHistoryWindow" class="secondary-btn" type="button">📜 ძველი შეკვეთები</button>
+          </div>
+
+          <div class="report-total">
+            <p>მთლიანი დღიური ნავაჭრი</p>
+            <strong id="totalDailySales">0.00 ლ</strong>
+          </div>
+
+          <div id="dailyReport" class="daily-report"></div>
+        </aside>
+      </main>
+    </div>
+
+    <div id="vanStockModal" class="modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="vanStockTitle">
+      <div class="modal-dialog van-stock-dialog">
+        <div class="modal-header">
+          <h2 id="vanStockTitle">ბორტის ნაშთების მართვა</h2>
+          <button id="closeVanStockBtn" type="button" class="modal-close-btn" aria-label="დახურვა">✕</button>
+        </div>
+
+        <div class="van-stock-form">
+          <label class="van-stock-field">
+            <span>პროდუქტი</span>
+            <select id="vanStockProductSelect"></select>
+          </label>
+          <label class="van-stock-field van-stock-qty-field">
+            <span>რაოდენობა</span>
+            <input id="vanStockQty" type="number" min="1" value="1" />
+          </label>
+          <button id="vanStockAddBtn" type="button" class="primary-btn">➕ ბორტზე დამატება</button>
+        </div>
+
+        <p id="vanStockMessage" class="van-stock-message" aria-live="polite"></p>
+
+        <div id="vanStockTable" class="van-stock-table-wrap"></div>
+
+        <div class="van-stock-footer">
+          <button id="vanStockExportBtn" type="button" class="secondary-btn">📥 Excel-ში ექსპორტი</button>
+          <button id="vanStockClearBtn" type="button" class="danger-btn">🗑️ ნაშთების განულება</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
+    <script type="module" src="./modules/app.js?v=20261117a"></script>
+  </body>
+</html>
