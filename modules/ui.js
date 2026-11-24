@@ -376,8 +376,54 @@ export function renderCart(items, summary = null) {
   }
 }
 
-export function renderDailyReport(report) {
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderOrderFoldList(sales) {
+  if (!sales.length) {
+    dom.dailyReport.innerHTML = '<p class="empty-state">ამ დღესათვის არცერთი შეკვეთა არ არის.</p>';
+    return;
+  }
+
+  dom.dailyReport.innerHTML = `<div class="order-fold-list">${sales
+    .map((sale) => {
+      const lines = (sale.items || [])
+        .map(
+          (item) => `
+            <div class="order-fold-line">
+              <span>${escapeHtml(item.code ? `${item.code} — ` : '')}${escapeHtml(item.name || '')}</span>
+              <span>${escapeHtml(item.quantity)} ც</span>
+              <span>${toCurrency(item.total)}</span>
+            </div>`
+        )
+        .join('');
+
+      return `
+        <details class="order-fold">
+          <summary>
+            <span class="order-fold-name">${escapeHtml(sale.storeName || 'უცნობი')}</span>
+            <strong>${toCurrency(sale.totalAmount)}</strong>
+          </summary>
+          <div class="order-fold-body">
+            ${lines || '<p class="empty-state">პროდუქტები არ არის.</p>'}
+          </div>
+        </details>`;
+    })
+    .join('')}</div>`;
+}
+
+export function renderDailyReport(report, sales) {
   dom.totalDailySales.textContent = toCurrency(report.total || 0);
+
+  if (document.documentElement.classList.contains('phone-app')) {
+    renderOrderFoldList(Array.isArray(sales) ? sales : []);
+    return;
+  }
 
   if (!report.stores.length) {
     dom.dailyReport.innerHTML = '<p class="empty-state">ამ დღესათვის არცერთი შეკვეთა არ არის.</p>';

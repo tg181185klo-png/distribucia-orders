@@ -951,6 +951,61 @@ html.phone-app .report-panel {
 
 html.phone-app .report-panel.is-open {
   display: block;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+html.phone-app .report-panel.is-open h2,
+html.phone-app .report-panel.is-open #reportLabel,
+html.phone-app .report-panel.is-open .report-controls {
+  display: none;
+}
+
+html.phone-app .order-fold-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+html.phone-app .order-fold {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+
+html.phone-app .order-fold summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.85rem 0.9rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 1rem;
+}
+
+html.phone-app .order-fold summary::-webkit-details-marker {
+  display: none;
+}
+
+html.phone-app .order-fold-name {
+  font-weight: 700;
+}
+
+html.phone-app .order-fold-body {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0 0.9rem 0.85rem;
+}
+
+html.phone-app .order-fold-line {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.6rem;
+  color: var(--muted);
+  font-size: 0.92rem;
 }
 
 html.phone-app .page-shell {

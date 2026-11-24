@@ -37,7 +37,7 @@ import {
   setSelectedProductDisplay,
   clearProductSelection,
   updateSubtotal
-} from './ui.js?v=20261124a';
+} from './ui.js?v=20261124c';
 import { adjustVanStockForOrderEdit, deductSoldItems, initVanStockUI, renderVanStockTable } from './vanstock.js?v=20261124a';
 import { verifyAdminDeleteCode } from './passwordprompt.js';
 
@@ -224,7 +224,7 @@ async function refreshStoreDirectory() {
 async function refreshView() {
   const sales = await refreshStoreDirectory();
   const report = getDailyReport(sales, state.reportDate);
-  renderDailyReport(report);
+  renderDailyReport(report, sales);
 
   const reportLabel = document.querySelector('#reportLabel');
   if (reportLabel) {
