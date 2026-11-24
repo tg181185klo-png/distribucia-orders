@@ -80,6 +80,7 @@ body {
   width: 42px;
   height: 42px;
   flex: none;
+  display: block;
   border-radius: 10px;
 }
 
