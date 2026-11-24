@@ -549,7 +549,7 @@ function renderOrders(sales) {
         <article class="sale-card">
             <div class="sale-header">
             <div>
-            <div class="sale-store">${sale.storeName || 'უცნობი'}</div>
+            <div class="sale-store">${sale.storeName || 'უცნობი'}${sale.consignment && !sale.consignmentSettled ? ' · კონსიგნაცია' : ''}</div>
             <div class="sale-phone">${[
               sale.storePhone ? `ტელ: ${sale.storePhone}` : '',
               sale.storeAddress ? `მის: ${sale.storeAddress}` : ''

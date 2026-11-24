@@ -1,5 +1,5 @@
 ﻿import { loadProducts } from './catalog.js?v=20261117a';
-import { addSale, loadSales, loadStores } from './storage.js?v=20261124b';
+import { addSale, loadConsignmentAlerts, loadSales, loadStores } from './storage.js?v=20261124e';
 import {
   buildSaleOrder,
   calculateSubtotal,
@@ -8,7 +8,7 @@ import {
   getLocalDateString,
   getLocalTimeString,
   toCurrency
-} from './orderutils.js?v=20261124a';
+} from './orderutils.js?v=20261124e';
 import {
   bindAddToCart,
   bindCartTableActions,
@@ -37,7 +37,7 @@ import {
   setSelectedProductDisplay,
   clearProductSelection,
   updateSubtotal
-} from './ui.js?v=20261124d';
+} from './ui.js?v=20261124e';
 import { adjustVanStockForOrderEdit, deductSoldItems, initVanStockUI, renderVanStockTable } from './vanstock.js?v=20261124a';
 import { verifyAdminDeleteCode } from './passwordprompt.js';
 
@@ -134,6 +134,7 @@ function enterEditMode(sale) {
     storePhone: sale.storePhone || '',
     storeAddress: sale.storeAddress || ''
   });
+  setConsignmentForm(sale);
 
   applyEditingUi();
   renderCart(state.cart, null);
@@ -150,6 +151,7 @@ function exitEditMode({ clearForm = true } = {}) {
   if (clearForm) {
     resetCartState();
     fillStoreFields({ storeName: '', storePhone: '', storeAddress: '' });
+    setConsignmentForm(null);
     resetSelectionToDefault();
   }
 }
@@ -200,6 +202,82 @@ function refreshCurrentSubtotal() {
   updateSubtotal(calculateSubtotal(quantity, price));
 }
 
+function consignmentBox() {
+  return document.querySelector('#consignmentCheck');
+}
+
+function consignmentDueInput() {
+  return document.querySelector('#consignmentDue');
+}
+
+function consignmentOn() {
+  return Boolean(consignmentBox()?.checked);
+}
+
+function consignmentDueValue() {
+  return consignmentDueInput()?.value || '';
+}
+
+function setConsignmentForm(sale) {
+  const box = consignmentBox();
+  const due = consignmentDueInput();
+  const wrap = document.querySelector('#consignmentDueWrap');
+  const on = Boolean(sale?.consignment) && !sale?.consignmentSettled;
+  if (box) box.checked = on;
+  if (due) due.value = on ? sale.consignmentDue || '' : '';
+  if (wrap) wrap.hidden = !on;
+}
+
+async function refreshConsignmentAlerts() {
+  const box = document.querySelector('#consignmentAlerts');
+  if (!box) return;
+  let alerts = [];
+  try {
+    alerts = await loadConsignmentAlerts();
+  } catch (error) {
+    alerts = [];
+  }
+  if (!alerts.length) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+  box.hidden = false;
+  const safe = (value) =>
+    String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/"/g, '&quot;');
+  box.innerHTML = `<strong>ვადაგადაცილებული კონსიგნაცია: ${alerts.length}</strong>${alerts
+    .map(
+      (alert) => `
+        <div class="consignment-alert-row">
+          <span>${safe(alert.storeName || 'უცნობი')} · ${formatDate(alert.consignmentDue)} · ${toCurrency(alert.totalAmount)}</span>
+          <button type="button" class="secondary-btn settle-consignment" data-sale-id="${safe(alert.id)}">გასტუმრებულია</button>
+        </div>`
+    )
+    .join('')}`;
+}
+
+async function settleConsignment(saleId) {
+  if (!saleId) return;
+  const allowed = await verifyAdminDeleteCode('კონსიგნაციის გასტუმრებისთვის შეიყვანეთ კოდი');
+  if (!allowed) return;
+  const sales = await loadSales({ id: saleId });
+  const sale = sales.find((entry) => entry.id === saleId);
+  if (!sale) {
+    setMessage('შეკვეთა ვერ მოიძებნა.');
+    return;
+  }
+  await addSale({
+    ...sale,
+    consignmentSettled: true,
+    updatedAt: new Date().toISOString()
+  });
+  await refreshView();
+  setMessage('კონსიგნაცია მონიშნულია გასტუმრებულად.');
+}
+
 function isPhoneApp() {
   return document.documentElement.classList.contains('phone-app');
 }
@@ -233,6 +311,7 @@ async function refreshView() {
 
   renderCart(state.cart, state.lastAddedSummary);
   refreshCurrentSubtotal();
+  await refreshConsignmentAlerts();
 }
 
 function handleProductPick(product) {
@@ -365,6 +444,11 @@ async function handleCompleteOrder() {
     return;
   }
 
+  if (consignmentOn() && !consignmentDueValue()) {
+    setMessage('კონსიგნაციას სჭირდება თარიღი — როდის გაისტუმრებს.');
+    return;
+  }
+
   const total = state.cart.reduce((sum, item) => sum + Number(item.total || 0), 0);
   const isEditing = Boolean(state.editingSale);
   const confirmText = isEditing
@@ -384,7 +468,10 @@ async function handleCompleteOrder() {
     saleDate: isEditing ? (state.editingSale.saleDate || state.reportDate) : state.reportDate,
     saleTime: isEditing ? (state.editingSale.saleTime || getLocalTimeString()) : getLocalTimeString(),
     status: state.editingSale?.status || 'მიღებულია',
-    notes: state.editingSale?.notes || ''
+    notes: state.editingSale?.notes || '',
+    consignment: consignmentOn(),
+    consignmentDue: consignmentOn() ? consignmentDueValue() : '',
+    consignmentSettled: consignmentOn() ? Boolean(state.editingSale?.consignmentSettled) : false
   });
 
   await addSale(sale);
@@ -514,5 +601,15 @@ bindCancelEdit(handleCancelEdit);
 bindOpenHistoryWindow(handleOpenHistoryWindow);
 
 document.querySelector('#historyBtn')?.addEventListener('click', handleOpenHistoryFromMainButton);
+document.querySelector('#consignmentCheck')?.addEventListener('change', () => {
+  const wrap = document.querySelector('#consignmentDueWrap');
+  if (wrap) wrap.hidden = !consignmentOn();
+});
+document.body.addEventListener('click', (event) => {
+  const button = event.target.closest('.settle-consignment');
+  if (!button) return;
+  event.preventDefault();
+  settleConsignment(button.dataset.saleId);
+});
 
 init();

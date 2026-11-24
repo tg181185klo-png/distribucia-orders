@@ -258,6 +258,19 @@ export default async function handler(req, res) {
         res.status(200).json({ ok: true, stores: storeDirectory(stored.orders) });
         return;
       }
+      if (String(query.alerts || '') === '1') {
+        const today = tbilisiDay();
+        const alerts = activeOrders(stored.orders)
+          .filter((sale) => sale.consignment && !sale.consignmentSettled && sale.consignmentDue && sale.consignmentDue < today)
+          .map((sale) => ({
+            id: sale.id,
+            storeName: sale.storeName || '',
+            consignmentDue: sale.consignmentDue,
+            totalAmount: Number(sale.totalAmount) || 0
+          }));
+        res.status(200).json({ ok: true, alerts });
+        return;
+      }
       const orders = selectOrders(stored.orders, query);
       res.status(200).json({ ok: true, count: orders.length, orders, storage: 'supabase' });
       return;

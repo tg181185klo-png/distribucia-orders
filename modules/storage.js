@@ -95,6 +95,13 @@ export async function loadSales(options) {
   }
 }
 
+export async function loadConsignmentAlerts() {
+  const response = await fetch(`${API_ENDPOINT}?alerts=1`, { cache: 'no-store' });
+  if (!response.ok) return [];
+  const payload = await response.json().catch(() => ({}));
+  return Array.isArray(payload.alerts) ? payload.alerts : [];
+}
+
 export async function loadStores() {
   try {
     return await fetchRemoteOrders({ stores: true });

@@ -18,6 +18,7 @@
         </div>
       </header>
 
+      <div id="consignmentAlerts" class="consignment-alerts" hidden></div>
       <main class="layout-grid">
         <section class="panel form-panel">
           <h2 id="orderFormTitle">ახალი შეკვეთა</h2>
@@ -78,6 +79,15 @@
               <button type="button" id="addToCartBtn" class="secondary-btn">დაამატე კალათაში</button>
               <button type="button" id="clearCartBtn" class="danger-btn">კალათის გაწმენდა</button>
             </div>
+
+            <label class="consignment-check full-width">
+              <input id="consignmentCheck" type="checkbox" />
+              <span>კონსიგნაცია</span>
+            </label>
+            <label id="consignmentDueWrap" class="full-width" hidden>
+              <span>როდის გაისტუმრებს</span>
+              <input id="consignmentDue" type="date" />
+            </label>
 
             <div class="subtotal-card full-width">
               <div>
@@ -170,6 +180,6 @@
         if (phone) document.documentElement.classList.add('phone-app');
       })();
     </script>
-    <script type="module" src="./modules/app.js?v=20261124d"></script>
+    <script type="module" src="./modules/app.js?v=20261124e"></script>
   </body>
 </html>

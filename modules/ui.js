@@ -1,4 +1,4 @@
-import { formatDate, toCurrency } from './orderutils.js?v=20261124a';
+import { formatDate, getLocalDateString, toCurrency } from './orderutils.js?v=20261124e';
 
 const dom = {
   saleForm: document.querySelector('#saleForm'),
@@ -395,6 +395,13 @@ function renderOrderFoldList(sales) {
         )
         .join('');
 
+      const consignment = sale.consignment && !sale.consignmentSettled;
+      const due = consignment ? formatDate(sale.consignmentDue) : '';
+      const overdue = consignment && sale.consignmentDue && sale.consignmentDue < getLocalDateString();
+      const mark = consignment
+        ? `<span class="consignment-mark${overdue ? ' is-overdue' : ''}">კონსიგნაცია${due ? ` · ${due}` : ''}${overdue ? ' · ვადაგადაცილებული' : ''}</span>`
+        : '';
+
       return `
         <details class="order-fold">
           <summary>
@@ -402,7 +409,9 @@ function renderOrderFoldList(sales) {
             <strong>${toCurrency(sale.totalAmount)}</strong>
           </summary>
           <div class="order-fold-body">
+            ${mark}
             ${lines || '<p class="empty-state">პროდუქტები არ არის.</p>'}
+            ${consignment ? `<button type="button" class="secondary-btn settle-consignment" data-sale-id="${escapeHtml(sale.id)}">გასტუმრებულია</button>` : ''}
           </div>
         </details>`;
     })
@@ -422,6 +431,12 @@ export function renderDailyReport(report, sales) {
     return;
   }
 
+  const consignmentStores = new Set(
+    (Array.isArray(sales) ? sales : [])
+      .filter((sale) => sale.consignment && !sale.consignmentSettled)
+      .map((sale) => sale.storeName)
+  );
+
   dom.dailyReport.innerHTML = report.stores
     .map(
       (store) => `
@@ -429,6 +444,7 @@ export function renderDailyReport(report, sales) {
           <div>
             <p class="report-label">სახელი გვარი</p>
             <h3>${store.storeName}</h3>
+            ${consignmentStores.has(store.storeName) ? '<p class="consignment-mark">კონსიგნაცია</p>' : ''}
           </div>
           <div>
             <p><strong>შეკვეთები:</strong> ${store.salesCount}</p>

@@ -1008,6 +1008,43 @@ html.phone-app .order-fold-line {
   font-size: 0.92rem;
 }
 
+.consignment-check {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+}
+
+.consignment-check input {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.consignment-mark {
+  display: inline-block;
+  margin: 0.15rem 0 0.45rem;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.consignment-mark.is-overdue {
+  color: #b91c1c;
+}
+
+.consignment-alerts {
+  margin: 0 0 0.8rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 16px;
+  background: #fef2f2;
+  color: #991b1b;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.consignment-alerts button {
+  justify-self: start;
+}
+
 html.phone-app .page-shell {
   width: min(100%, calc(100% - 0.75rem));
 }
