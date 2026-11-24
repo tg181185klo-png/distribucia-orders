@@ -1,4 +1,4 @@
-import { formatDate, toCurrency } from './orderUtils.js?v=20260815a';
+import { formatDate, toCurrency } from './orderutils.js?v=20261124a';
 
 const dom = {
   saleForm: document.querySelector('#saleForm'),

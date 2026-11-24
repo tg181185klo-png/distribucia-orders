@@ -2,8 +2,8 @@
 // State lives ONLY in localStorage under its own key and never touches
 // the remote Netlify Blobs sync in storage.js.
 
-import { getLocalDateString, getLocalTimeString } from './orderUtils.js';
-import { verifyAdminDeleteCode } from './passwordPrompt.js';
+import { getLocalDateString, getLocalTimeString } from './orderutils.js';
+import { verifyAdminDeleteCode } from './passwordprompt.js';
 
 const VAN_STOCK_KEY = 'polimeri_van_stock_v1';
 const VAN_STOCK_HISTORY_KEY = 'polimeri_van_stock_history_v1';

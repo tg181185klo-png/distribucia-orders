@@ -5,6 +5,7 @@ import { get, put } from '@vercel/blob';
 const BLOB_PATH = 'distribucia-orders/list.json';
 const FILE_PATH = path.join(process.cwd(), 'data', 'orders.json');
 const ROW_ID = 'distribucia-orders';
+const BACKUP_ID = 'distribucia-orders-backup';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rtseufuxngkgwmaipqui.supabase.co';
 const SUPABASE_KEY =
   process.env.SUPABASE_ANON_KEY ||
@@ -96,9 +97,9 @@ async function writeBlobOrders(orders) {
   });
 }
 
-async function readSupabaseOrders() {
+async function readRow(id) {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/finance_store?id=eq.${ROW_ID}&select=payload`,
+    `${SUPABASE_URL}/rest/v1/finance_store?id=eq.${id}&select=payload`,
     { headers: supabaseHeaders(), cache: 'no-store' }
   );
   if (!response.ok) {
@@ -109,7 +110,7 @@ async function readSupabaseOrders() {
   return Array.isArray(orders) ? orders : [];
 }
 
-async function writeSupabaseOrders(orders) {
+async function writeRow(id, orders) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/finance_store`, {
     method: 'POST',
     headers: supabaseHeaders({
@@ -117,7 +118,7 @@ async function writeSupabaseOrders(orders) {
       Prefer: 'resolution=merge-duplicates,return=minimal'
     }),
     body: JSON.stringify({
-      id: ROW_ID,
+      id,
       payload: { orders },
       updated_at: new Date().toISOString()
     })
@@ -125,6 +126,14 @@ async function writeSupabaseOrders(orders) {
   if (!response.ok) {
     throw new Error(`Supabase write ${response.status}`);
   }
+}
+
+async function readSupabaseOrders() {
+  return readRow(ROW_ID);
+}
+
+async function writeSupabaseOrders(orders) {
+  return writeRow(ROW_ID, orders);
 }
 
 async function readLegacyOrders() {
@@ -150,15 +159,38 @@ async function loadOrders() {
     console.error('supabase read failed', error);
   }
 
+  let backup = [];
+  try {
+    backup = await readRow(BACKUP_ID);
+  } catch (error) {
+    console.error('supabase backup read failed', error);
+  }
+
   const legacy = await readLegacyOrders();
-  const merged = mergeSalesById(remote, legacy);
+  const merged = mergeSalesById(remote, backup, legacy);
   if (remoteOk && signature(merged) !== signature(remote)) {
     await writeSupabaseOrders(merged);
   }
   return merged;
 }
 
+async function saveBackup(previous) {
+  if (!previous.length) return;
+  const existing = await readRow(BACKUP_ID);
+  const kept = mergeSalesById(existing, previous);
+  if (signature(kept) !== signature(existing)) {
+    await writeRow(BACKUP_ID, kept);
+  }
+}
+
 async function saveOrders(orders) {
+  let previous = [];
+  try {
+    previous = await readSupabaseOrders();
+  } catch (error) {
+    console.error('supabase read before save failed', error);
+  }
+
   try {
     await writeSupabaseOrders(orders);
   } catch (error) {
@@ -166,6 +198,12 @@ async function saveOrders(orders) {
     if (hasBlob()) await writeBlobOrders(orders);
     else await writeFileOrders(orders);
     return;
+  }
+
+  try {
+    await saveBackup(previous.length ? previous : orders);
+  } catch (error) {
+    console.error('supabase backup failed', error);
   }
 
   try {

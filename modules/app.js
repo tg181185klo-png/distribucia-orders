@@ -8,7 +8,7 @@ import {
   getLocalDateString,
   getLocalTimeString,
   toCurrency
-} from './orderUtils.js?v=20260826a';
+} from './orderutils.js?v=20261124a';
 import {
   bindAddToCart,
   bindCartTableActions,
@@ -37,9 +37,9 @@ import {
   setSelectedProductDisplay,
   clearProductSelection,
   updateSubtotal
-} from './ui.js?v=20260826a';
-import { adjustVanStockForOrderEdit, deductSoldItems, initVanStockUI, renderVanStockTable } from './vanstock.js?v=20260826a';
-import { verifyAdminDeleteCode } from './passwordPrompt.js';
+} from './ui.js?v=20261124a';
+import { adjustVanStockForOrderEdit, deductSoldItems, initVanStockUI, renderVanStockTable } from './vanstock.js?v=20261124a';
+import { verifyAdminDeleteCode } from './passwordprompt.js';
 
 const EDIT_UNLOCK_KEY = 'orderEditUnlock';
 const EDIT_UNLOCK_MS = 10 * 60 * 1000;
