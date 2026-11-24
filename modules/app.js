@@ -286,7 +286,6 @@ function showPhoneReport() {
   const panel = document.querySelector('.report-panel');
   if (!panel) return;
   panel.classList.add('is-open');
-  if (panel.scrollIntoView) panel.scrollIntoView();
 }
 
 async function refreshStoreDirectory() {
@@ -601,6 +600,18 @@ bindCancelEdit(handleCancelEdit);
 bindOpenHistoryWindow(handleOpenHistoryWindow);
 
 document.querySelector('#historyBtn')?.addEventListener('click', handleOpenHistoryFromMainButton);
+document.addEventListener('click', (event) => {
+  let node = event.target;
+  while (node && node !== document) {
+    if (node.tagName === 'BUTTON') {
+      node.classList.remove('is-bubbling');
+      void node.offsetWidth;
+      node.classList.add('is-bubbling');
+      break;
+    }
+    node = node.parentNode;
+  }
+}, true);
 document.querySelector('#consignmentCheck')?.addEventListener('change', async () => {
   const wrap = document.querySelector('#consignmentDueWrap');
   const wasOn = Boolean(state.editingSale?.consignment) && !state.editingSale?.consignmentSettled;

@@ -65,20 +65,20 @@ body {
 .hero {
   display: flex;
   justify-content: space-between;
-  align-items: end;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.55rem;
 }
 
 .hero-heading {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.45rem;
 }
 
 .hero-logo {
-  width: 56px;
-  height: 56px;
+  width: 36px;
+  height: 36px;
   flex: none;
   display: block;
   border-radius: 50%;
@@ -87,14 +87,16 @@ body {
 
 .hero-heading h1 {
   margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.1;
 }
 
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--accent);
-  font-size: 0.8rem;
-  margin: 0 0 0.5rem;
+  font-size: 0.68rem;
+  margin: 0 0 0.15rem;
 }
 
 h1, h2, h3, p {
@@ -231,7 +233,7 @@ h1, h2, h3, p {
   padding: 0.8rem 1.1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.12s ease, opacity 0.12s ease;
+  transition: filter 0.18s ease, background 0.18s ease;
 }
 
 .primary-btn {
@@ -253,7 +255,17 @@ h1, h2, h3, p {
 .primary-btn:hover,
 .secondary-btn:hover,
 .danger-btn:hover {
-  transform: translateY(-1px);
+  filter: brightness(0.97);
+}
+
+button.is-bubbling {
+  animation: btn-bubble 0.46s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes btn-bubble {
+  0% { transform: scale(1); }
+  38% { transform: scale(1.07); }
+  100% { transform: scale(1); }
 }
 
 .subtotal-card,
@@ -965,15 +977,49 @@ html.phone-app .report-panel .report-picker {
 }
 
 html.phone-app .report-panel {
-  display: none;
+  display: block;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-width: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition:
+    max-height 0.48s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.32s ease,
+    transform 0.48s cubic-bezier(0.22, 1, 0.36, 1),
+    margin-top 0.48s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.48s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html.phone-app .report-panel.is-open {
-  display: block;
-  margin-top: 0.75rem;
-  padding: 0.75rem;
+  max-height: 75vh;
+  opacity: 1;
+  overflow: auto;
+  transform: none;
+  margin-top: 0.55rem;
+  padding: 0.7rem;
+  border-width: 1px;
   border-radius: 16px;
   box-shadow: none;
+  pointer-events: auto;
+}
+
+html.phone-app .report-panel.is-open .order-fold {
+  animation: fold-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+html.phone-app .report-panel.is-open .order-fold:nth-child(2) { animation-delay: 0.04s; }
+html.phone-app .report-panel.is-open .order-fold:nth-child(3) { animation-delay: 0.08s; }
+html.phone-app .report-panel.is-open .order-fold:nth-child(4) { animation-delay: 0.12s; }
+html.phone-app .report-panel.is-open .order-fold:nth-child(n + 5) { animation-delay: 0.16s; }
+
+@keyframes fold-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
 }
 
 html.phone-app .report-panel.is-open h2,
@@ -1071,10 +1117,26 @@ html.phone-app .order-fold-line {
 
 html.phone-app .page-shell {
   width: min(100%, calc(100% - 0.75rem));
+  padding-top: 0.4rem;
 }
 
 html.phone-app .hero {
   align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+html.phone-app .hero-logo {
+  width: 30px;
+  height: 30px;
+}
+
+html.phone-app .hero-heading h1 {
+  font-size: 1.15rem;
+}
+
+html.phone-app .hero-actions .secondary-btn {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8rem;
 }
 
 html.phone-app .form-actions {
