@@ -1008,11 +1008,16 @@ html.phone-app .order-fold-line {
   font-size: 0.92rem;
 }
 
-.consignment-check {
-  display: flex;
+.sale-form label.consignment-check {
+  flex-direction: row;
   align-items: center;
   gap: 0.6rem;
+  color: var(--text);
   font-weight: 700;
+}
+
+#consignmentDueWrap[hidden] {
+  display: none !important;
 }
 
 .consignment-check input {
