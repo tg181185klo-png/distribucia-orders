@@ -4,6 +4,12 @@ import { get, put } from '@vercel/blob';
 
 const BLOB_PATH = 'distribucia-orders/list.json';
 const FILE_PATH = path.join(process.cwd(), 'data', 'orders.json');
+const ROW_ID = 'distribucia-orders';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rtseufuxngkgwmaipqui.supabase.co';
+const SUPABASE_KEY =
+  process.env.SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0c2V1ZnV4bmdrZ3dtYWlwcXVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwNjEwOTcsImV4cCI6MjA5ODYzNzA5N30.QNXjkO2b5YFFck72BwiJdpatmPTV8aslxMVMCovhkck';
 
 function saleRevisionTime(sale) {
   const updated = Date.parse(sale?.updatedAt || 0) || 0;
@@ -37,8 +43,25 @@ function mergeSalesById(...lists) {
   });
 }
 
+function signature(orders) {
+  let max = 0;
+  for (const sale of orders) {
+    const time = saleRevisionTime(sale);
+    if (time > max) max = time;
+  }
+  return `${orders.length}:${max}`;
+}
+
 function hasBlob() {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+}
+
+function supabaseHeaders(extra = {}) {
+  return {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    ...extra
+  };
 }
 
 async function readFileOrders() {
@@ -73,17 +96,83 @@ async function writeBlobOrders(orders) {
   });
 }
 
+async function readSupabaseOrders() {
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/finance_store?id=eq.${ROW_ID}&select=payload`,
+    { headers: supabaseHeaders(), cache: 'no-store' }
+  );
+  if (!response.ok) {
+    throw new Error(`Supabase read ${response.status}`);
+  }
+  const rows = await response.json();
+  const orders = rows?.[0]?.payload?.orders;
+  return Array.isArray(orders) ? orders : [];
+}
+
+async function writeSupabaseOrders(orders) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/finance_store`, {
+    method: 'POST',
+    headers: supabaseHeaders({
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal'
+    }),
+    body: JSON.stringify({
+      id: ROW_ID,
+      payload: { orders },
+      updated_at: new Date().toISOString()
+    })
+  });
+  if (!response.ok) {
+    throw new Error(`Supabase write ${response.status}`);
+  }
+}
+
+async function readLegacyOrders() {
+  const parts = [];
+  if (hasBlob()) {
+    try {
+      parts.push(await readBlobOrders());
+    } catch (error) {
+      console.error('blob read failed', error);
+    }
+  }
+  parts.push(await readFileOrders());
+  return mergeSalesById(...parts);
+}
+
 async function loadOrders() {
-  if (hasBlob()) return readBlobOrders();
-  return readFileOrders();
+  let remote = [];
+  let remoteOk = false;
+  try {
+    remote = await readSupabaseOrders();
+    remoteOk = true;
+  } catch (error) {
+    console.error('supabase read failed', error);
+  }
+
+  const legacy = await readLegacyOrders();
+  const merged = mergeSalesById(remote, legacy);
+  if (remoteOk && signature(merged) !== signature(remote)) {
+    await writeSupabaseOrders(merged);
+  }
+  return merged;
 }
 
 async function saveOrders(orders) {
-  if (hasBlob()) {
-    await writeBlobOrders(orders);
+  try {
+    await writeSupabaseOrders(orders);
+  } catch (error) {
+    console.error('supabase write failed', error);
+    if (hasBlob()) await writeBlobOrders(orders);
+    else await writeFileOrders(orders);
     return;
   }
-  await writeFileOrders(orders);
+
+  try {
+    if (hasBlob()) await writeBlobOrders(orders);
+  } catch (error) {
+    console.error('blob backup failed', error);
+  }
 }
 
 function readIncoming(req) {
@@ -103,7 +192,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const orders = await loadOrders();
       res.setHeader('Cache-Control', 'no-store');
-      res.status(200).json({ ok: true, orders });
+      res.status(200).json({ ok: true, orders, storage: 'supabase' });
       return;
     }
 
@@ -128,7 +217,7 @@ export default async function handler(req, res) {
 
       const merged = mergeSalesById(existing, incoming);
       await saveOrders(merged);
-      res.status(200).json({ ok: true, count: merged.length, orders: merged });
+      res.status(200).json({ ok: true, count: merged.length, orders: merged, storage: 'supabase' });
       return;
     }
 
