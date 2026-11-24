@@ -14,6 +14,7 @@ export function promptForPassword(message) {
 
     const input = document.createElement('input');
     input.type = 'password';
+    input.setAttribute('inputmode', 'numeric');
     input.className = 'password-input';
     input.setAttribute('autocomplete', 'off');
 

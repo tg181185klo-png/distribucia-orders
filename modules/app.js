@@ -39,7 +39,7 @@ import {
   updateSubtotal
 } from './ui.js?v=20261124e';
 import { adjustVanStockForOrderEdit, deductSoldItems, initVanStockUI, renderVanStockTable } from './vanstock.js?v=20261124a';
-import { verifyAdminDeleteCode } from './passwordprompt.js';
+import { verifyAdminDeleteCode } from './passwordprompt.js?v=20261124g';
 
 const EDIT_UNLOCK_KEY = 'orderEditUnlock';
 const EDIT_UNLOCK_MS = 10 * 60 * 1000;
@@ -261,7 +261,7 @@ async function refreshConsignmentAlerts() {
 
 async function settleConsignment(saleId) {
   if (!saleId) return;
-  const allowed = await verifyAdminDeleteCode('კონსიგნაციის გასტუმრებისთვის შეიყვანეთ კოდი');
+  const allowed = await verifyAdminDeleteCode('გასტუმრების კოდი');
   if (!allowed) return;
   const sales = await loadSales({ id: saleId });
   const sale = sales.find((entry) => entry.id === saleId);
@@ -601,15 +601,33 @@ bindCancelEdit(handleCancelEdit);
 bindOpenHistoryWindow(handleOpenHistoryWindow);
 
 document.querySelector('#historyBtn')?.addEventListener('click', handleOpenHistoryFromMainButton);
-document.querySelector('#consignmentCheck')?.addEventListener('change', () => {
+document.querySelector('#consignmentCheck')?.addEventListener('change', async () => {
   const wrap = document.querySelector('#consignmentDueWrap');
+  const wasOn = Boolean(state.editingSale?.consignment) && !state.editingSale?.consignmentSettled;
+  if (!consignmentOn() && wasOn) {
+    const allowed = await verifyAdminDeleteCode('გასტუმრების კოდი');
+    if (!allowed && consignmentBox()) {
+      consignmentBox().checked = true;
+      if (wrap) wrap.hidden = false;
+      return;
+    }
+  }
   if (wrap) wrap.hidden = !consignmentOn();
 });
-document.body.addEventListener('click', (event) => {
-  const button = event.target.closest('.settle-consignment');
+document.addEventListener('click', (event) => {
+  let node = event.target;
+  let button = null;
+  while (node && node !== document) {
+    if (node.classList && node.classList.contains('settle-consignment')) {
+      button = node;
+      break;
+    }
+    node = node.parentNode;
+  }
   if (!button) return;
   event.preventDefault();
-  settleConsignment(button.dataset.saleId);
-});
+  event.stopPropagation();
+  settleConsignment(button.getAttribute('data-sale-id'));
+}, true);
 
 init();

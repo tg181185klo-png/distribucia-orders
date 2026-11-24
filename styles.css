@@ -19,12 +19,12 @@
 /* Password modal styles for history page */
 .password-overlay {
   position: fixed;
+  z-index: 10000;
   inset: 0;
   background: rgba(2, 6, 23, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1200;
 }
 .password-dialog {
   background: #fff;
