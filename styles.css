@@ -14,9 +14,6 @@
 
 * {
   box-sizing: border-box;
-  .page-shell {
-    width: min(100%, calc(100% - 1rem));
-    padding-top: 1rem;
 }
 
 /* Password modal styles for history page */
@@ -939,4 +936,38 @@ h1, h2, h3, p {
 
 .product-search-wrap.has-value .product-search-hint {
   display: none;
+}
+
+/* Phone: only today's order form. The report opens from the button. */
+html.phone-app #openHistoryWindow,
+html.phone-app .period-export-bar,
+html.phone-app .report-panel .report-picker {
+  display: none;
+}
+
+html.phone-app .report-panel {
+  display: none;
+}
+
+html.phone-app .report-panel.is-open {
+  display: block;
+}
+
+html.phone-app .page-shell {
+  width: min(100%, calc(100% - 0.75rem));
+}
+
+html.phone-app .hero {
+  align-items: center;
+}
+
+html.phone-app .form-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+html.phone-app #historyBtn,
+html.phone-app #completeOrderBtn {
+  width: 100%;
 }

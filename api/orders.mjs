@@ -97,6 +97,10 @@ async function writeBlobOrders(orders) {
   });
 }
 
+function tbilisiDay() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tbilisi' }).format(new Date());
+}
+
 async function readRow(id) {
   const response = await fetch(
     `${SUPABASE_URL}/rest/v1/finance_store?id=eq.${id}&select=payload`,
@@ -106,11 +110,14 @@ async function readRow(id) {
     throw new Error(`Supabase read ${response.status}`);
   }
   const rows = await response.json();
-  const orders = rows?.[0]?.payload?.orders;
-  return Array.isArray(orders) ? orders : [];
+  const payload = rows?.[0]?.payload || {};
+  return {
+    orders: Array.isArray(payload.orders) ? payload.orders : [],
+    backupDay: typeof payload.backupDay === 'string' ? payload.backupDay : ''
+  };
 }
 
-async function writeRow(id, orders) {
+async function writeRow(id, orders, backupDay) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/finance_store`, {
     method: 'POST',
     headers: supabaseHeaders({
@@ -119,7 +126,7 @@ async function writeRow(id, orders) {
     }),
     body: JSON.stringify({
       id,
-      payload: { orders },
+      payload: backupDay ? { orders, backupDay } : { orders },
       updated_at: new Date().toISOString()
     })
   });
@@ -132,8 +139,8 @@ async function readSupabaseOrders() {
   return readRow(ROW_ID);
 }
 
-async function writeSupabaseOrders(orders) {
-  return writeRow(ROW_ID, orders);
+async function writeSupabaseOrders(orders, backupDay) {
+  return writeRow(ROW_ID, orders, backupDay);
 }
 
 async function readLegacyOrders() {
@@ -150,77 +157,93 @@ async function readLegacyOrders() {
 }
 
 async function loadOrders() {
-  let remote = [];
-  let remoteOk = false;
   try {
-    remote = await readSupabaseOrders();
-    remoteOk = true;
+    const remote = await readSupabaseOrders();
+    if (remote.orders.length) return remote;
   } catch (error) {
     console.error('supabase read failed', error);
   }
 
-  let backup = [];
-  try {
-    backup = await readRow(BACKUP_ID);
-  } catch (error) {
-    console.error('supabase backup read failed', error);
-  }
-
   const legacy = await readLegacyOrders();
-  const merged = mergeSalesById(remote, backup, legacy);
-  if (remoteOk && signature(merged) !== signature(remote)) {
-    await writeSupabaseOrders(merged);
+  if (legacy.length) {
+    try {
+      await writeSupabaseOrders(legacy, '');
+    } catch (error) {
+      console.error('supabase restore failed', error);
+    }
   }
-  return merged;
+  return { orders: legacy, backupDay: '' };
 }
 
-async function saveBackup(previous) {
-  if (!previous.length) return;
-  const existing = await readRow(BACKUP_ID);
-  const kept = mergeSalesById(existing, previous);
-  if (signature(kept) !== signature(existing)) {
-    await writeRow(BACKUP_ID, kept);
-  }
+function activeOrders(orders) {
+  return orders.filter((sale) => sale && sale.deleted !== true);
 }
 
-async function saveOrders(orders) {
-  let previous = [];
-  try {
-    previous = await readSupabaseOrders();
-  } catch (error) {
-    console.error('supabase read before save failed', error);
+function saleDay(sale) {
+  return String(sale?.saleDate || '').slice(0, 10);
+}
+
+function selectOrders(orders, query) {
+  const date = String(query.date || '');
+  const from = String(query.from || '');
+  const to = String(query.to || '');
+  const id = String(query.id || '');
+  const narrowed = Boolean(date || (from && to) || id);
+  const source = narrowed ? activeOrders(orders) : orders;
+  return source.filter((sale) => {
+    if (id) return sale.id === id;
+    const day = saleDay(sale);
+    if (date) return day === date;
+    if (from && to) return day >= from && day <= to;
+    return true;
+  });
+}
+
+function storeDirectory(orders) {
+  const map = new Map();
+  activeOrders(orders).forEach((sale) => {
+    const storeName = String(sale.storeName || '').trim();
+    const storePhone = String(sale.storePhone || '').trim();
+    const storeAddress = String(sale.storeAddress || '').trim();
+    if (!storeName && !storePhone && !storeAddress) return;
+    const key = `${storeName}|${storePhone}|${storeAddress}`;
+    if (!map.has(key)) map.set(key, { storeName, storePhone, storeAddress });
+  });
+  return [...map.values()];
+}
+
+async function saveOrders(incoming) {
+  const current = await loadOrders();
+  if (incoming.length === 0 && current.orders.length > 0) {
+    return { orders: current.orders, preserved: true };
   }
 
-  try {
-    await writeSupabaseOrders(orders);
-  } catch (error) {
-    console.error('supabase write failed', error);
-    if (hasBlob()) await writeBlobOrders(orders);
-    else await writeFileOrders(orders);
-    return;
+  const merged = mergeSalesById(current.orders, incoming);
+  let backupDay = current.backupDay;
+  const today = tbilisiDay();
+  if (backupDay !== today && current.orders.length) {
+    try {
+      await writeRow(BACKUP_ID, current.orders);
+      backupDay = today;
+    } catch (error) {
+      console.error('daily backup failed', error);
+    }
   }
 
-  try {
-    await saveBackup(previous.length ? previous : orders);
-  } catch (error) {
-    console.error('supabase backup failed', error);
-  }
-
-  try {
-    if (hasBlob()) await writeBlobOrders(orders);
-  } catch (error) {
-    console.error('blob backup failed', error);
-  }
+  await writeSupabaseOrders(merged, backupDay);
+  return { orders: merged, preserved: false };
 }
 
 function readIncoming(req) {
   const body = req.body;
-  if (Array.isArray(body)) return body;
-  if (body && Array.isArray(body.orders)) return body.orders;
+  if (Array.isArray(body)) return { patch: false, orders: body };
+  if (body && Array.isArray(body.orders)) return { patch: body.patch === true, orders: body.orders };
   if (typeof body === 'string' && body.trim()) {
     const parsed = JSON.parse(body);
-    if (Array.isArray(parsed)) return parsed;
-    if (parsed && Array.isArray(parsed.orders)) return parsed.orders;
+    if (Array.isArray(parsed)) return { patch: false, orders: parsed };
+    if (parsed && Array.isArray(parsed.orders)) {
+      return { patch: parsed.patch === true, orders: parsed.orders };
+    }
   }
   return null;
 }
@@ -228,34 +251,34 @@ function readIncoming(req) {
 export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
-      const orders = await loadOrders();
+      const query = req.query || {};
+      const stored = await loadOrders();
       res.setHeader('Cache-Control', 'no-store');
-      res.status(200).json({ ok: true, orders, storage: 'supabase' });
+      if (String(query.stores || '') === '1') {
+        res.status(200).json({ ok: true, stores: storeDirectory(stored.orders) });
+        return;
+      }
+      const orders = selectOrders(stored.orders, query);
+      res.status(200).json({ ok: true, count: orders.length, orders, storage: 'supabase' });
       return;
     }
 
     if (req.method === 'POST') {
       const incoming = readIncoming(req);
-      if (!Array.isArray(incoming)) {
+      if (!incoming || !Array.isArray(incoming.orders)) {
         res.status(400).json({ ok: false, error: 'Invalid payload' });
         return;
       }
 
-      const existing = await loadOrders();
-      if (incoming.length === 0 && existing.length > 0) {
-        res.status(200).json({
-          ok: true,
-          count: existing.length,
-          orders: existing,
-          preserved: true,
-          message: 'Empty overwrite rejected; history kept.'
-        });
-        return;
-      }
-
-      const merged = mergeSalesById(existing, incoming);
-      await saveOrders(merged);
-      res.status(200).json({ ok: true, count: merged.length, orders: merged, storage: 'supabase' });
+      const saved = await saveOrders(incoming.orders);
+      const orders = incoming.patch ? selectOrders(saved.orders, { date: saleDay(incoming.orders[0]) }) : saved.orders;
+      res.status(200).json({
+        ok: true,
+        count: saved.orders.length,
+        orders,
+        preserved: Boolean(saved.preserved),
+        storage: 'supabase'
+      });
       return;
     }
 

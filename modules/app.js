@@ -1,5 +1,5 @@
 ﻿import { loadProducts } from './catalog.js?v=20261117a';
-import { addSale, loadSales } from './storage.js?v=20260826a';
+import { addSale, loadSales, loadStores } from './storage.js?v=20261124b';
 import {
   buildSaleOrder,
   calculateSubtotal,
@@ -158,7 +158,7 @@ async function maybeStartEditingFromQuery() {
   const editId = new URLSearchParams(window.location.search).get('edit');
   if (!editId) return;
 
-  const sales = await loadSales();
+  const sales = await loadSales({ id: editId });
   const sale = sales.find((entry) => entry.id === editId);
   if (!sale) {
     clearEditUnlock();
@@ -200,9 +200,24 @@ function refreshCurrentSubtotal() {
   updateSubtotal(calculateSubtotal(quantity, price));
 }
 
+function isPhoneApp() {
+  return document.documentElement.classList.contains('phone-app');
+}
+
+function showPhoneReport() {
+  const panel = document.querySelector('.report-panel');
+  if (!panel) return;
+  panel.classList.add('is-open');
+  if (panel.scrollIntoView) panel.scrollIntoView();
+}
+
 async function refreshStoreDirectory() {
-  const sales = await loadSales();
-  state.storeDirectory = collectStoreDirectory(sales);
+  const sales = await loadSales({ date: state.reportDate });
+  try {
+    state.storeDirectory = await loadStores();
+  } catch (error) {
+    state.storeDirectory = collectStoreDirectory(sales);
+  }
   return sales;
 }
 
@@ -385,6 +400,15 @@ async function handleCompleteOrder() {
   const savedDate = sale.saleDate || state.reportDate;
   exitEditMode({ clearForm: true });
 
+  if (isPhoneApp()) {
+    state.reportDate = savedDate;
+    setReportDate(state.reportDate);
+    await refreshView();
+    showPhoneReport();
+    setMessage('შეკვეთა შენახულია. ქვემოთ დღევანდელი ანგარიშია.');
+    return;
+  }
+
   window.location.assign(`history.html?date=${encodeURIComponent(savedDate)}`);
 }
 
@@ -398,10 +422,23 @@ function handleCancelEdit() {
 }
 
 function handleOpenHistoryWindow() {
+  if (isPhoneApp()) {
+    showPhoneReport();
+    return;
+  }
   window.location.assign(`history.html?date=${encodeURIComponent(state.reportDate)}`);
 }
 
 function handleOpenHistoryFromMainButton() {
+  if (isPhoneApp()) {
+    const panel = document.querySelector('.report-panel');
+    if (panel && panel.classList.contains('is-open')) {
+      panel.classList.remove('is-open');
+      return;
+    }
+    showPhoneReport();
+    return;
+  }
   window.location.assign(`history.html?date=${encodeURIComponent(state.reportDate)}`);
 }
 
@@ -449,6 +486,9 @@ async function init() {
   initVanStockUI(state.products);
   await refreshView();
   applyEditingUi();
+  if (isPhoneApp() && new URLSearchParams(window.location.search).get('report') === '1') {
+    showPhoneReport();
+  }
   await maybeStartEditingFromQuery();
 }
 

@@ -1,4 +1,4 @@
-import { deleteSale, loadSales } from './storage.js?v=20260826b';
+import { deleteSale, loadSales } from './storage.js?v=20261124b';
 import { formatDate, getDailyReport, getLocalDateString, toCurrency } from './orderutils.js';
 import { ensurePdfFonts, PDF_FONT, preloadPdfFonts } from './pdffonts.js';
 import { verifyAdminDeleteCode } from './passwordprompt.js';
@@ -582,7 +582,7 @@ function renderOrders(sales) {
 
 async function loadFilteredSales() {
   const dateKey = getDateKey(getSelectedDate());
-  const sales = await loadSales();
+  const sales = await loadSales({ date: dateKey });
   return sales
     .filter((sale) => getDateKey(sale.saleDate) === dateKey)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -623,7 +623,7 @@ function getPeriodRange() {
 }
 
 async function loadSalesInRange(from, to) {
-  const sales = await loadSales();
+  const sales = await loadSales({ from, to });
   return sales.filter((sale) => {
     const key = getDateKey(sale.saleDate);
     return key && key >= from && key <= to;
@@ -838,7 +838,7 @@ elements.historyOrders?.addEventListener('click', async (event) => {
     const saleId = deleteButton.dataset.saleId;
     if (!saleId) return;
 
-    const sales = await loadSales();
+    const sales = await loadSales({ id: saleId });
     const sale = sales.find((entry) => entry.id === saleId);
     if (!sale) {
       window.alert('შეკვეთა ვერ მოიძებნა.');
@@ -851,7 +851,7 @@ elements.historyOrders?.addEventListener('click', async (event) => {
     const label = sale.storeName || 'შეკვეთა';
     if (!window.confirm(`ნამდვილად გსურთ „${label}“-ის წაშლა?`)) return;
 
-    await deleteSale(saleId);
+    await deleteSale(saleId, sale);
     adjustVanStockForOrderEdit(sale.items || [], []);
     await refreshHistory();
     return;
@@ -863,7 +863,7 @@ elements.historyOrders?.addEventListener('click', async (event) => {
   const saleId = button.dataset.saleId;
   if (!saleId) return;
 
-  const sales = await loadSales();
+  const sales = await loadSales({ id: saleId });
   const sale = sales.find((entry) => entry.id === saleId);
   if (!sale) {
     window.alert('შეკვეთა ვერ მოიძებნა.');

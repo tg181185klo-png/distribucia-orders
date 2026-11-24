@@ -54,31 +54,63 @@ export function mergeSalesById(...lists) {
   });
 }
 
-async function fetchRemoteOrders() {
-  const response = await fetch(API_ENDPOINT, { cache: 'no-store' });
+function ordersUrl(options) {
+  const params = new URLSearchParams();
+  if (options.date) params.set('date', options.date);
+  if (options.from) params.set('from', options.from);
+  if (options.to) params.set('to', options.to);
+  if (options.id) params.set('id', options.id);
+  if (options.stores) params.set('stores', '1');
+  const query = params.toString();
+  return query ? `${API_ENDPOINT}?${query}` : API_ENDPOINT;
+}
+
+async function fetchRemoteOrders(options) {
+  const response = await fetch(ordersUrl(options || {}), { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`Remote sales request failed: ${response.status}`);
   }
 
   const payload = await response.json();
+  if (options && options.stores) return Array.isArray(payload.stores) ? payload.stores : [];
   return Array.isArray(payload.orders) ? payload.orders : [];
 }
 
-async function readRemoteSales() {
-  const orders = await fetchRemoteOrders();
-  const local = readLocalSales();
-  const merged = mergeSalesById(orders, local);
-  writeLocalSales(merged);
-  return merged;
+function isActiveSale(sale) {
+  return Boolean(sale) && sale.deleted !== true;
 }
 
-async function writeRemoteSales(sales) {
+export async function loadSales(options) {
+  const filter = options || {};
+  if (typeof fetch !== 'function') {
+    return readLocalSales().filter(isActiveSale);
+  }
+
+  try {
+    const orders = await fetchRemoteOrders(filter);
+    return orders.filter(isActiveSale);
+  } catch (error) {
+    console.warn('Using local sales fallback.', error);
+    return readLocalSales().filter(isActiveSale);
+  }
+}
+
+export async function loadStores() {
+  try {
+    return await fetchRemoteOrders({ stores: true });
+  } catch (error) {
+    console.warn('Could not load store directory.', error);
+    return [];
+  }
+}
+
+async function savePatch(sale) {
   const response = await fetch(API_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(sales)
+    body: JSON.stringify({ patch: true, orders: [sale] })
   });
 
   if (!response.ok) {
@@ -86,50 +118,7 @@ async function writeRemoteSales(sales) {
   }
 
   const payload = await response.json().catch(() => ({}));
-  const saved = Array.isArray(payload.orders) ? payload.orders : sales;
-  writeLocalSales(saved);
-  return saved;
-}
-
-function isActiveSale(sale) {
-  return Boolean(sale) && sale.deleted !== true;
-}
-
-async function loadAllSales() {
-  if (typeof fetch !== 'function') {
-    return readLocalSales();
-  }
-
-  try {
-    return await readRemoteSales();
-  } catch (error) {
-    console.warn('Using local sales fallback.', error);
-    return readLocalSales();
-  }
-}
-
-export async function loadSales() {
-  const sales = await loadAllSales();
-  return sales.filter(isActiveSale);
-}
-
-export async function saveSales(sales) {
-  const localMerged = mergeSalesById(readLocalSales(), sales);
-  writeLocalSales(localMerged);
-
-  if (typeof fetch !== 'function') {
-    return localMerged;
-  }
-
-  try {
-    // Always re-fetch remote first so concurrent entries are never overwritten.
-    const remote = await fetchRemoteOrders();
-    const merged = mergeSalesById(remote, localMerged);
-    return await writeRemoteSales(merged);
-  } catch (error) {
-    console.warn('Could not sync sales to remote storage.', error);
-    return localMerged;
-  }
+  return Array.isArray(payload.orders) ? payload.orders.filter(isActiveSale) : [sale].filter(isActiveSale);
 }
 
 /** History must never be wiped — clear is intentionally disabled. */
@@ -139,27 +128,22 @@ export async function clearSales() {
 }
 
 export async function addSale(sale) {
-  const sales = await loadSales();
-  const nextSales = mergeSalesById(sales, [sale]);
-  await saveSales(nextSales);
-  return nextSales;
+  return savePatch(sale);
 }
 
-export async function deleteSale(id) {
+export async function deleteSale(id, sale) {
   if (!id) return loadSales();
 
-  const all = await loadAllSales();
-  const sale = all.find((entry) => entry.id === id);
-  if (!sale || sale.deleted) {
-    return all.filter(isActiveSale);
+  const current = sale || (await loadSales({ id })).find((entry) => entry.id === id);
+  if (!current || current.deleted) {
+    return loadSales(current?.saleDate ? { date: current.saleDate } : {});
   }
 
   const tombstone = {
-    ...sale,
+    ...current,
     deleted: true,
     updatedAt: new Date().toISOString()
   };
 
-  await saveSales(all.map((entry) => (entry.id === id ? tombstone : entry)));
-  return loadSales();
+  return savePatch(tombstone);
 }

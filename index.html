@@ -160,6 +160,16 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
-    <script type="module" src="./modules/app.js?v=20261124a"></script>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('all') === '1') return;
+        var phone = false;
+        try { phone = window.matchMedia('(max-width: 820px)').matches; } catch (e) {}
+        if (!phone && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent || '')) phone = true;
+        if (phone) document.documentElement.classList.add('phone-app');
+      })();
+    </script>
+    <script type="module" src="./modules/app.js?v=20261124b"></script>
   </body>
 </html>
