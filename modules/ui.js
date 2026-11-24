@@ -376,14 +376,6 @@ export function renderCart(items, summary = null) {
   }
 }
 
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 function renderOrderFoldList(sales) {
   if (!sales.length) {
     dom.dailyReport.innerHTML = '<p class="empty-state">ამ დღესათვის არცერთი შეკვეთა არ არის.</p>';

@@ -37,7 +37,7 @@ import {
   setSelectedProductDisplay,
   clearProductSelection,
   updateSubtotal
-} from './ui.js?v=20261124c';
+} from './ui.js?v=20261124d';
 import { adjustVanStockForOrderEdit, deductSoldItems, initVanStockUI, renderVanStockTable } from './vanstock.js?v=20261124a';
 import { verifyAdminDeleteCode } from './passwordprompt.js';
 
