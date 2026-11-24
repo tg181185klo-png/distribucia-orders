@@ -77,11 +77,12 @@ body {
 }
 
 .hero-logo {
-  width: 42px;
-  height: 42px;
+  width: 56px;
+  height: 56px;
   flex: none;
   display: block;
-  border-radius: 10px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .hero-heading h1 {
