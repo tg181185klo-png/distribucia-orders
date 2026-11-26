@@ -2,7 +2,7 @@ import { deleteSale, loadSales } from './storage.js?v=20261124b';
 import { formatDate, getDailyReport, getLocalDateString, toCurrency } from './orderutils.js';
 import { ensurePdfFonts, PDF_FONT, preloadPdfFonts } from './pdffonts.js';
 import { verifyAdminDeleteCode } from './passwordprompt.js';
-import { adjustVanStockForOrderEdit } from './vanstock.js?v=20261124a';
+import { adjustVanStockForOrderEdit } from './vanstock.js?v=20261126a';
 import {
   buildProductOrderIndex,
   loadProducts,

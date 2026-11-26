@@ -704,6 +704,49 @@ button.is-bubbling {
   font-size: 0.95rem;
 }
 
+.van-waybill-btn {
+  display: inline-flex;
+  margin-top: 0.75rem;
+  cursor: pointer;
+}
+
+.van-waybill-note {
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.van-waybill-preview {
+  margin-top: 0.75rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.van-waybill-preview[hidden] {
+  display: none !important;
+}
+
+.van-waybill-preview input {
+  width: 5.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.van-waybill-unknown {
+  color: var(--danger);
+  font-size: 0.88rem;
+}
+
+.van-waybill-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+}
+
 .van-stock-message {
   color: var(--success);
   min-height: 1.2rem;

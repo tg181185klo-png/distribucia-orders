@@ -38,7 +38,7 @@ import {
   clearProductSelection,
   updateSubtotal
 } from './ui.js?v=20261124e';
-import { adjustVanStockForOrderEdit, deductSoldItems, initVanStockUI, renderVanStockTable } from './vanstock.js?v=20261124a';
+import { adjustVanStockForOrderEdit, deductSoldItems, initVanStockUI, renderVanStockTable } from './vanstock.js?v=20261126a';
 import { verifyAdminDeleteCode } from './passwordprompt.js?v=20261124g';
 
 const EDIT_UNLOCK_KEY = 'orderEditUnlock';

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>შეკვეთები</title>
-    <link rel="stylesheet" href="styles.css?v=20261124k" />
+    <link rel="stylesheet" href="styles.css?v=20261126a" />
   </head>
   <body>
     <div class="page-shell">
@@ -161,6 +161,13 @@
           <button id="vanStockAddBtn" type="button" class="primary-btn">➕ ბორტზე დამატება</button>
         </div>
 
+        <label class="secondary-btn van-waybill-btn">
+          ზედნადების ატვირთვა (PDF, Excel, ფოტო)
+          <input id="vanWaybillInput" type="file" accept=".pdf,.xlsx,.xls,.csv,image/*" hidden />
+        </label>
+        <p class="van-waybill-note">ზედნადების რაოდენობა ემატება ბორტს. გაყიდვისას იგივე პროდუქტი ავტომატურად აკლდება.</p>
+        <div id="vanWaybillPreview" class="van-waybill-preview" hidden></div>
+
         <p id="vanStockMessage" class="van-stock-message" aria-live="polite"></p>
 
         <div id="vanStockTable" class="van-stock-table-wrap"></div>
@@ -183,6 +190,6 @@
         if (phone) document.documentElement.classList.add('phone-app');
       })();
     </script>
-    <script type="module" src="./modules/app.js?v=20261124k"></script>
+    <script type="module" src="./modules/app.js?v=20261126a"></script>
   </body>
 </html>

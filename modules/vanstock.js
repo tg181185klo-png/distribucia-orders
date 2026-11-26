@@ -4,9 +4,11 @@
 
 import { getLocalDateString, getLocalTimeString } from './orderutils.js';
 import { verifyAdminDeleteCode } from './passwordprompt.js';
+import { readWaybillFile } from './waybill.js?v=20261126a';
 
 const VAN_STOCK_KEY = 'polimeri_van_stock_v1';
 const VAN_STOCK_HISTORY_KEY = 'polimeri_van_stock_history_v1';
+const WAYBILL_SEEN_KEY = 'polimeri_van_waybills_v1';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -243,8 +245,13 @@ const ui = {
   clearBtn: null,
   exportBtn: null,
   tableWrap: null,
-  message: null
+  message: null,
+  fileInput: null,
+  preview: null
 };
+
+let waybillProducts = [];
+let pendingWaybill = null;
 
 function setVanStockMessage(text) {
   if (ui.message) {
@@ -304,6 +311,125 @@ export function renderVanStockTable() {
         </tr>
       </tfoot>
     </table>`;
+}
+
+function seenWaybills() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(WAYBILL_SEEN_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function rememberWaybill(number) {
+  if (!number) return;
+  const seen = seenWaybills();
+  if (!seen.includes(number)) {
+    seen.push(number);
+    try {
+      localStorage.setItem(WAYBILL_SEEN_KEY, JSON.stringify(seen.slice(-40)));
+    } catch (error) {
+      console.error('Could not remember waybill', error);
+    }
+  }
+}
+
+function hideWaybillPreview() {
+  pendingWaybill = null;
+  if (ui.preview) {
+    ui.preview.hidden = true;
+    ui.preview.innerHTML = '';
+  }
+}
+
+function renderWaybillPreview(result) {
+  pendingWaybill = result;
+  if (!ui.preview) return;
+  if (!result.items.length) {
+    ui.preview.hidden = true;
+    ui.preview.innerHTML = '';
+    setVanStockMessage('ფაილიდან პროდუქტი ვერ ამოვიცანი. სცადეთ Excel ან უფრო მკაფიო ფოტო.');
+    return;
+  }
+
+  const rows = result.items
+    .map(
+      (item, index) => `
+        <tr>
+          <td>${escapeHtml(item.code)}</td>
+          <td>${escapeHtml(item.name)}</td>
+          <td><input type="number" min="0" step="any" data-waybill-qty="${index}" value="${item.quantity}" /></td>
+        </tr>`
+    )
+    .join('');
+  const unknown = result.unknown.length
+    ? `<p class="van-waybill-unknown">ვერ დავაკავშირე კატალოგს: ${result.unknown
+        .map((entry) => escapeHtml(entry.label))
+        .join(', ')}</p>`
+    : '';
+
+  ui.preview.hidden = false;
+  ui.preview.innerHTML = `
+    <p>ზედნადებზე ${result.items.length} პროდუქტია. რაოდენობა იქედანაა — შეამოწმეთ და ჩაწერეთ ბორტზე.</p>
+    <table class="van-stock-table">
+      <thead>
+        <tr><th>კოდი</th><th>პროდუქტი</th><th>ზედნადებზე</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${unknown}
+    <div class="van-waybill-actions">
+      <button type="button" id="vanWaybillApply" class="primary-btn">ბორტზე ჩაწერა</button>
+      <button type="button" id="vanWaybillCancel" class="secondary-btn">გაუქმება</button>
+    </div>`;
+
+  ui.preview.querySelector('#vanWaybillApply')?.addEventListener('click', applyWaybill);
+  ui.preview.querySelector('#vanWaybillCancel')?.addEventListener('click', () => {
+    hideWaybillPreview();
+    setVanStockMessage('');
+  });
+}
+
+function applyWaybill() {
+  if (!pendingWaybill) return;
+  if (pendingWaybill.waybillNo && seenWaybills().includes(pendingWaybill.waybillNo)) {
+    const again = window.confirm('ეს ზედნადები უკვე ატვირთული იყო. თავიდან დაემატოს ბორტს?');
+    if (!again) return;
+  }
+
+  const inputs = ui.preview?.querySelectorAll('[data-waybill-qty]') || [];
+  let kinds = 0;
+  let units = 0;
+  pendingWaybill.items.forEach((item, index) => {
+    const qty = Number(inputs[index]?.value ?? item.quantity);
+    if (!Number.isFinite(qty) || qty <= 0) return;
+    addToVanStock(item.code, item.name, qty);
+    kinds += 1;
+    units += qty;
+  });
+
+  rememberWaybill(pendingWaybill.waybillNo);
+  hideWaybillPreview();
+  renderVanStockTable();
+  setVanStockMessage(kinds ? `ბორტს დაემატა ${kinds} პროდუქტი, სულ ${units} ცალი.` : 'რაოდენობა არ არის.');
+}
+
+async function handleWaybillFile(event) {
+  const file = event.target?.files?.[0];
+  if (event.target) event.target.value = '';
+  if (!file) return;
+
+  hideWaybillPreview();
+  setVanStockMessage('ზედნადები იკითხება…');
+  try {
+    const result = await readWaybillFile(file, waybillProducts, setVanStockMessage);
+    renderWaybillPreview(result);
+    if (result.items.length) setVanStockMessage('');
+  } catch (error) {
+    console.error('Could not read waybill', error);
+    setVanStockMessage(error?.message || 'ზედნადები ვერ წაიკითხა.');
+  }
 }
 
 function openModal() {
@@ -488,6 +614,9 @@ export function initVanStockUI(products) {
   ui.exportBtn = document.querySelector('#vanStockExportBtn');
   ui.tableWrap = document.querySelector('#vanStockTable');
   ui.message = document.querySelector('#vanStockMessage');
+  ui.fileInput = document.querySelector('#vanWaybillInput');
+  ui.preview = document.querySelector('#vanWaybillPreview');
+  waybillProducts = products || [];
 
   if (!ui.modal) return;
 
@@ -514,6 +643,7 @@ export function initVanStockUI(products) {
 
   ui.tableWrap?.addEventListener('click', handleTableClick);
   ui.addBtn?.addEventListener('click', () => handleAddToTruck(products || []));
+  ui.fileInput?.addEventListener('change', handleWaybillFile);
   ui.exportBtn?.addEventListener('click', exportVanStockToExcel);
   ui.clearBtn?.addEventListener('click', handleClearStock);
 
